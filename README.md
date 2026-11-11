@@ -1,8 +1,9 @@
 # Document request mail handler (n8n + LLM)
 
-An n8n workflow that answers emailed requests for shipment documents at a freight brokerage: rate confirmations, carrier confirmations, BOLs and PODs.
+An n8n workflow that answers emailed requests for shipment documents at a freight brokerage: rate confirmations, carrier confirmations, BOLs.
 
 It has been running in production for over a year.
+
 ![Workflow in n8n](workflow.png)
 
 | | |
