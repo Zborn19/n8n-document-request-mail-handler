@@ -1,0 +1,1753 @@
+{
+  "name": "Document request mail handler",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -976,
+        -768
+      ],
+      "id": "ca062aa3-6778-4e23-a859-b1c4b6bc35c8",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "62ebf944-3741-4739-a285-9d196e825b0e",
+              "name": "ThreadID",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "d52e2c39-3227-4b99-829c-a99198bc884d",
+              "name": "MessageID",
+              "value": "={{ $json.messages[0].id }}",
+              "type": "string"
+            },
+            {
+              "id": "45fa5bd8-9542-4e3c-96d7-52cb14919ac4",
+              "name": "Subject",
+              "value": "={{ $json.messages[0].Subject }}",
+              "type": "string"
+            },
+            {
+              "id": "9de6bf03-c1c0-423c-9837-67028b9f607c",
+              "name": "Snippet",
+              "value": "={{ $json.messages[0].snippet }}",
+              "type": "string"
+            },
+            {
+              "id": "cf2c986f-7d84-4a90-9f9b-af4bfc96da52",
+              "name": "From",
+              "value": "={{ $json.messages[0].From }}",
+              "type": "string"
+            },
+            {
+              "id": "7904a036-420f-4301-b025-3c40fc4f31f4",
+              "name": "Messages",
+              "value": "={{ $json.messages }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -304,
+        -416
+      ],
+      "id": "0e904fca-b5a3-4659-a910-9a41331d1f31",
+      "name": "Set_DATA"
+    },
+    {
+      "parameters": {
+        "resource": "thread",
+        "operation": "get",
+        "threadId": "={{ $json.id }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -528,
+        -416
+      ],
+      "id": "30064534-c180-47b7-aa5e-c71c576b25b8",
+      "name": "Get a thread",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const item = $json;\n\n// 1. Проверка темы\nconst subject = item.Subject || '';\nconst subjectRegex = /^[A-Za-z][0-9]+$/;\nconst isSubjectValid = subjectRegex.test(subject);\n\n// 2. Проверка переписки\nconst messages = item.Messages || [];\nconst hasReplies = messages.length > 1;\n\n// Возвращаем тот же item, дополненный флагами\nreturn {\n  ...item,\n  subject_is_valid: isSubjectValid,\n  has_replies: hasReplies\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -16,
+        -416
+      ],
+      "id": "c5f4e2fb-7102-481d-9d2e-394e836a774e",
+      "name": "Clean Subject +Replies"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "3f0a67b0-1848-4f20-961c-67d756385c5b",
+              "leftValue": "={{ $json.has_replies }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        272,
+        -416
+      ],
+      "id": "6eef55ad-3c11-4663-8655-356e87e6d25d",
+      "name": "Replies"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "5453f6e2-ec57-4a10-b58a-e8240213dfa8",
+              "leftValue": "={{ $json.subject_is_valid }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        496,
+        -416
+      ],
+      "id": "9f6dae0f-b1a3-450c-bfd1-0b1bf0f08fd6",
+      "name": "Subject"
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "==========\nsubject\n=========\n\n⚠️ MANUAL CORP REQUEST \n\nUnclear Subject \n\nSubject: {{ $json.Subject }}\n",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        848,
+        -256
+      ],
+      "id": "e00cd732-2b94-4bb1-b03b-cd3590d7d746",
+      "name": "1_not",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Telegram bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $('Subject').item.json.MessageID }}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1184,
+        -160
+      ],
+      "id": "da47db4b-5374-42f4-a28f-97beb29ed391",
+      "name": "MARK_READ",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        720,
+        -480
+      ],
+      "id": "cfddc370-483a-4cc5-9ad2-ea1cc246784c",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "={\n  \"type\": \"object\",\n  \"required\": [\n    \"thread_id\",\n    \"message_id\",\n    \"email_subject\",\n    \"Snippet\", \n    \"load_number\",\n    \"document_type\",\n    \"document_label\",\n    \"secondary_document_types\",\n    \"manual_review\",\n    \"owner\",\n    \"confidence\",\n    \"request_summary\",\n    \"evidence\",\n    \"notes\"\n  ],\n  \"properties\": {\n    \"thread_id\": { \"type\": \"string\" },\n    \"message_id\": {\"type\": \"string\"},\n    \"email_subject\": { \"type\": \"string\" },\n    \"Snippet\": {\"type\": \"string\"},\n    \"load_number\": {\n      \"type\": [\"string\", \"null\"]\n    },\n    \"document_type\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"CUSTOMER TENDER\",\n        \"CARRIER CONFIRMATION\",\n        \"BOL or POD\",\n        \"UNKNOWN\"\n      ]\n    },\n    \"document_label\": {\n      \"type\": \"string\",\n      \"enum\": [\"RC\", \"CC\", \"BOL\", \"UNKNOWN\"]\n    },\n    \"secondary_document_types\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"string\",\n        \"enum\": [\n          \"CUSTOMER TENDER\",\n          \"CARRIER CONFIRMATION\",\n          \"BOL or POD\"\n        ]\n      }\n    },\n    \"manual_review\": {\n      \"type\": \"boolean\",\n      \"description\": \"true = manual processing, false = automatic processing\"\n    },\n    \"owner\": {\n      \"type\": [\"string\", \"null\"],\n      \"description\": \"Internal owner identified via tool (agent / manager). Null if not found.\"\n    },\n    \"confidence\": {\n      \"type\": \"number\",\n      \"minimum\": 0,\n      \"maximum\": 1\n    },\n    \"request_summary\": {\n      \"type\": \"string\"\n    },\n    \"evidence\": {\n      \"type\": \"object\",\n      \"required\": [\"keywords_found\", \"quotes\"],\n      \"properties\": {\n        \"keywords_found\": {\n          \"type\": \"array\",\n          \"items\": { \"type\": \"string\" }\n        },\n        \"quotes\": {\n          \"type\": \"array\",\n          \"items\": { \"type\": \"string\" },\n          \"maxItems\": 3\n        }\n      }\n    },\n    \"notes\": {\n      \"type\": \"string\"\n    }\n  }\n}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        976,
+        -480
+      ],
+      "id": "1568bdfb-331f-4e90-85c2-882a1f3cfd98",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "owners",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "LOAD#",
+              "lookupValue": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('values0_Value', ``, 'string') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        848,
+        -480
+      ],
+      "id": "29c34b43-b636-4975-a614-d27bdf972700",
+      "name": "Get row(s) in sheet in Google Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      },
+      "notes": "This is where you can find owner of the load by Load # \nCol1 - Load# \nCol2 - Owner\nCor3 - Delivery date"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.ThreadID }}\n{{ $json.MessageID }}\n{{ $json.From }}\nSubject :{{ $json.Subject }}\nBody : {{ $json.Snippet }}\n\n",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=You are an email triage and document-intent classifier for a freight brokerage / logistics intermediary.\n\nContext\nWe are the intermediary: we receive load details from customers and tender loads to carriers.\nPeople email us requesting documents or asking questions related to shipments.\nYour job is to understand the email intent and determine whether a document is being requested, which document it is, and whether the request can be processed automatically or requires manual handling.\n\nInputs you receive\n- thread_id\n- from_email\n- from_name\n- subject\n- body\n\nAdditional capability\nYou have access to a tool that can identify the internal owner (agent / team member) responsible for the load or email context.\nUse this tool whenever possible to determine the owner.\nIf the owner cannot be determined, return null.\n\nYour tasks\n\n1. Understand intent\nRead the email carefully and determine:\n- Is the sender requesting a document?\n- Is the request only a document request, or does it include any other questions or clarifications?\n\nAlways infer intent first.\n\n2. Classify the primary document request\nClassify into one primary document type (or UNKNOWN).\n\nDocument classification rules and internal labels\n\nCUSTOMER TENDER (internal label: RC)\nCustomer-side confirmation documents addressed to us.\nIncludes: Customer Tender, Customer Rate Confirmation, Rate Confirmation, Rate Con, RC, Load Confirmation.\nEven if the sender says “Carrier Confirmation”, classify as CUSTOMER TENDER if the document is clearly customer-side and addressed to us.\n\nCARRIER CONFIRMATION (internal label: CC)\nCarrier-side confirmation documents we issue or resend to carriers.\nIncludes: Carrier Confirmation, Carrier Tender, Carrier Rate Confirmation, Carrier Ratecon, CRC, Carrier Packet.\n\nBOL or POD (internal label: BOL)\nDelivery documents.\nIncludes: BOL, Bill of Lading, POD, Proof of Delivery, Signed BOL, Stamped paperwork, Delivery Receipt.\n\nUNKNOWN\nUse if the document type cannot be reasonably determined or if the email is not a document request.\n\nAlways apply the correct internal label based on intent.\n\n3. Secondary documents\nIf multiple documents are requested:\n- Choose the primary one as document_type\n- List others in secondary_document_types\n\n4. Load number extraction\nExtract a load / shipment / reference number from subject or body.\n\nExamples:\nJ12345, J123456, E123456, U12346\n\nRules:\n- If multiple candidates exist, select the most likely load identifier.\n- Preserve the raw text exactly as found.\n- If none found, return null and briefly explain in notes.\n\n5. Owner identification (CRITICAL)\nDetermine the internal owner responsible for this request.\nUse the available tool to look up the owner based on load number.\n- If found, return the owner identifier exactly as provided by the tool.\n- If not found, return null and briefly explain in notes.\n\n6. Human-readable summary\nProvide a short, clear summary of what the sender wants.\n\nManual vs automatic processing (CRITICAL)\n\nIMPORTANT CLARIFICATION:\nPolite or indirect wording does NOT imply ambiguity or a need for clarification.\n\nPhrases such as:\n- \"Do you happen to have...\"\n- \"Please advise\"\n- \"Just checking\"\n- \"Hello / Hi\"\n- \"Thank you\"\n- Question marks used only as politeness\n\nDO NOT count as questions requiring manual review\nIF the email intent is clearly a request to send or resend a document.\n\nmanual_review = false (automatic processing)\nONLY if all conditions below are met:\n- The email is a direct request to send or resend a document\n- No additional questions are present\n- No ambiguity, clarification, dispute, or comparison is requested\n- If the sender asks whether we have a specific document\n(e.g. “Do you have…”, “Can you provide…”, “Are you able to share…”),\nAND the document type is explicitly named,\nTHEN treat this as a direct document request\nAND set manual_review = false,\nunless another topic is present.\n- “Please advise” alone does NOT count as a clarification request.\n\nmanual_review = true (manual handling REQUIRED)\nSet to true if any of the following is present:\n- Any question other than a direct document request\n- Requests for clarification, confirmation, comparison, or explanation\n- Pricing questions\n- Complaints or disputes\n- Document quality or readability questions\n- Mixed intent (document request plus any other topic)\n\nWhen in doubt, set manual_review = true.\n\nImportant rules\n- Return only valid JSON matching the required schema\n- No markdown, no explanations, no extra text\n- Do not invent facts\n- If uncertain, use UNKNOWN and explain briefly in notes\n- If the email is not a document request (status update, pricing, scheduling, complaint, spam),\n  use document_type = \"UNKNOWN\" and describe intent in notes\n- Always return the original message_id exactly as received in the input.\n- Always return the original Snippet exactly as received in the input.\n\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        784,
+        -704
+      ],
+      "id": "0f39e183-89ae-4d74-8ae8-ed7e5bb46c10",
+      "name": "NEW"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "62ebf944-3741-4739-a285-9d196e825b0e",
+              "name": "ThreadID",
+              "value": "={{ $json.output.thread_id }}",
+              "type": "string"
+            },
+            {
+              "id": "d52e2c39-3227-4b99-829c-a99198bc884d",
+              "name": "MessageID",
+              "value": "={{ $json.output.message_id }}",
+              "type": "string"
+            },
+            {
+              "id": "45fa5bd8-9542-4e3c-96d7-52cb14919ac4",
+              "name": "Subject",
+              "value": "={{ $json.output.email_subject }}",
+              "type": "string"
+            },
+            {
+              "id": "9de6bf03-c1c0-423c-9837-67028b9f607c",
+              "name": "Snippet",
+              "value": "={{ $json.output.Snippet }}",
+              "type": "string"
+            },
+            {
+              "id": "ad761ae9-13ef-4098-8c57-3ba0d816d323",
+              "name": "Manual_review",
+              "value": "={{ $json.output.manual_review }}",
+              "type": "boolean"
+            },
+            {
+              "id": "7904a036-420f-4301-b025-3c40fc4f31f4",
+              "name": "Doc_Type",
+              "value": "={{ $json.output.document_label }}",
+              "type": "string"
+            },
+            {
+              "id": "89952fc7-e2f6-4167-989f-2c1e33faab00",
+              "name": "Owner",
+              "value": "={{ $json.output.owner }}",
+              "type": "string"
+            },
+            {
+              "id": "bcbc6fa6-bb61-49d0-a724-05b646050fdb",
+              "name": "Summary",
+              "value": "={{ $json.output.request_summary }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1184,
+        -608
+      ],
+      "id": "4b315e24-8fc2-4a6e-af03-185b660a69b6",
+      "name": "Set_DATA_After_AI"
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "={{ $json.Subject }}_{{ $json.Doc_Type }}",
+        "filter": {},
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1632,
+        -768
+      ],
+      "id": "f88bc660-9ec4-4488-ba99-ad98c6726b51",
+      "name": "Search File ID",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "87bd5c36-102d-4f83-a6b5-bb63d4b6aaf8",
+              "leftValue": "={{ $json.File_ID }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2304,
+        -704
+      ],
+      "id": "b7f16821-0a50-4a15-9f9a-7e16f5b04147",
+      "name": "IF_UPLOADED"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "6077b1b0-87b0-4e5e-b0de-147f3fdef38a",
+              "leftValue": "={{ $json.Manual_review }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1408,
+        -608
+      ],
+      "id": "35226ace-d538-4781-840d-249e47de662a",
+      "name": "IF_MANUAL"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.File_ID }}",
+          "mode": "id"
+        },
+        "options": {
+          "binaryPropertyName": "=attachment",
+          "fileName": "={{ $json.File_Name }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2528,
+        -800
+      ],
+      "id": "e8df69ea-011d-433a-848c-3946fc60cc8a",
+      "name": "Download file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "thread",
+        "operation": "reply",
+        "threadId": "={{ $json.ThreadID }}",
+        "messageId": "={{ $json.MessageID }}",
+        "message": "Please see attached.",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {
+                "property": "attachment"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2752,
+        -800
+      ],
+      "id": "c4ea796d-484b-4ee5-8f7e-448bc74ffed9",
+      "name": "Reply",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $('Download file').item.json.MessageID }}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2976,
+        -800
+      ],
+      "id": "62a95c9e-6464-4aa1-a445-64d96e8239dc",
+      "name": "Mark as read",
+      "alwaysOutputData": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $('IF_UPLOADED').item.json.MessageID }}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2752,
+        -608
+      ],
+      "id": "cd20478a-e6a3-4b58-87aa-9100d4b153da",
+      "name": "MARK_READ_UN_UPLOADED",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "thread",
+        "operation": "addLabels",
+        "threadId": "={{ $json.ThreadID }}",
+        "labelIds": [
+          "LABEL_ID_WAITING_FOR_DOCUMENT"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2528,
+        -608
+      ],
+      "id": "002a9083-4dde-4987-b33c-3611f0ee60f2",
+      "name": "LABEL_PPW",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "==========\ndone\n=========\n\n{{ $('Download file').item.json.Subject }}\n\n{{ $('Download file').item.json.Summary }}\n\n✅File found and sent\n",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3200,
+        -800
+      ],
+      "id": "eed0caae-dbd5-4f9e-8481-75851cee20b5",
+      "name": "2_not",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Telegram bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "thread",
+        "operation": "addLabels",
+        "threadId": "={{ $('Subject').item.json.ThreadID }}",
+        "labelIds": [
+          "LABEL_ID_MANUAL"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1184,
+        -352
+      ],
+      "id": "f3db6197-9647-4c95-ae88-ec2e6eb600e2",
+      "name": "LABEL_NOT",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "thread",
+        "filters": {
+          "labelIds": [
+            "LABEL_ID_WAITING_FOR_DOCUMENT"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -752,
+        -1056
+      ],
+      "id": "9f742ae9-5300-4dce-b6dd-c940020714ff",
+      "name": "Get many threads1",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "thread",
+        "operation": "get",
+        "threadId": "={{ $json.id }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -528,
+        -1056
+      ],
+      "id": "634cac19-5083-4010-8eca-b495a1656811",
+      "name": "Get a thread1",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "62ebf944-3741-4739-a285-9d196e825b0e",
+              "name": "ThreadID",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "d52e2c39-3227-4b99-829c-a99198bc884d",
+              "name": "MessageID",
+              "value": "={{ $json.messages[0].id }}",
+              "type": "string"
+            },
+            {
+              "id": "45fa5bd8-9542-4e3c-96d7-52cb14919ac4",
+              "name": "Subject",
+              "value": "={{ $json.messages[0].Subject }}",
+              "type": "string"
+            },
+            {
+              "id": "9de6bf03-c1c0-423c-9837-67028b9f607c",
+              "name": "Snippet",
+              "value": "={{ $json.messages[0].snippet }}",
+              "type": "string"
+            },
+            {
+              "id": "cf2c986f-7d84-4a90-9f9b-af4bfc96da52",
+              "name": "From",
+              "value": "={{ $json.messages[0].From }}",
+              "type": "string"
+            },
+            {
+              "id": "7904a036-420f-4301-b025-3c40fc4f31f4",
+              "name": "Messages",
+              "value": "={{ $json.messages }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -304,
+        -1056
+      ],
+      "id": "fb8d3f46-9227-40cd-b676-4c8724b5e265",
+      "name": "Set_DATA1"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -80,
+        -832
+      ],
+      "id": "c28ab054-cdf2-4718-8134-42760fb570e1",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"required\": [\n    \"ThreadID\",\n    \"message_id\",\n    \"load_number\",\n    \"document_type\",\n    \"document_label\"\n  ],\n  \"properties\": {\n    \"ThreadID\": { \"type\": \"string\" },\n    \"message_id\": {\"type\": \"string\"},\n    \"load_number\": { \"type\": [\"string\", \"null\"] },\n    \"document_type\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"CUSTOMER TENDER\",\n        \"CARRIER CONFIRMATION\",\n        \"BOL or POD\",\n        \"UNKNOWN\"\n      ]\n    },\n    \"document_label\": {\n      \"type\": \"string\",\n      \"enum\": [\"RC\", \"CC\", \"BOL\", \"UNKNOWN\"]\n    }\n  }\n}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        64,
+        -832
+      ],
+      "id": "988234f2-c51b-4256-9b99-73bd6c2b0c03",
+      "name": "Structured Output Parser1"
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "={{ $json.output.load_number }}_{{ $json.output.document_label }}",
+        "filter": {},
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        272,
+        -1056
+      ],
+      "id": "b3d43a7b-39a7-4f4e-ba10-b6eff9eafb2f",
+      "name": "Search File ID1",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "938b64e2-1d47-4925-869c-92954c0bbd47",
+              "name": "File_ID",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "49daca7b-79b7-42e5-908b-2d55b0a89311",
+              "name": "File_Name",
+              "value": "={{ $json.name }}",
+              "type": "string"
+            },
+            {
+              "id": "f8fcbcda-2268-4616-9775-a4d715bd544b",
+              "name": "ThreadID",
+              "value": "={{ $('PPW').item.json.output.ThreadID }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        496,
+        -1056
+      ],
+      "id": "11dca542-3b55-40d8-b5d7-23443366e252",
+      "name": "Add Thread_PPW"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "938b64e2-1d47-4925-869c-92954c0bbd47",
+              "name": "File_ID",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "49daca7b-79b7-42e5-908b-2d55b0a89311",
+              "name": "File_Name",
+              "value": "={{ $json.name }}",
+              "type": "string"
+            },
+            {
+              "id": "f8fcbcda-2268-4616-9775-a4d715bd544b",
+              "name": "ThreadID",
+              "value": "={{ $('IF_MANUAL').item.json.ThreadID }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1856,
+        -768
+      ],
+      "id": "ff00897a-89ae-4b7b-b665-0506f5d498dd",
+      "name": "Add Thread_NEW"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "fieldsToMatchString": "ThreadID",
+        "joinMode": "keepEverything",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2080,
+        -704
+      ],
+      "id": "16161bfe-d074-409f-9b51-69f2680bb178",
+      "name": "Merge_NEW"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "fieldsToMatchString": "ThreadID",
+        "joinMode": "keepEverything",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        848,
+        -1056
+      ],
+      "id": "948605d1-14ee-4787-8f7f-ca461eeea7f0",
+      "name": "MergePPW"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "87bd5c36-102d-4f83-a6b5-bb63d4b6aaf8",
+              "leftValue": "={{ $json.File_ID }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1184,
+        -1056
+      ],
+      "id": "886a64a0-488f-4e28-8d1f-bfee7710217a",
+      "name": "IF_UPLOADED1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.ThreadID }}\n{{ $json.MessageID }}\n{{ $json.From }}\n\nSubject : {{ $json.Subject }}\n\nBody :{{ $json.Snippet }}\n",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=You are a lightweight document parser for a freight brokerage workflow.\n\nContext\nThis email has already been pre-processed.\nDo NOT analyze intent, manual handling, ownership, or confidence.\nYour only task is to extract structured identifiers.\n\nInputs you receive\n- ThreadID\n- message_id\n- subject\n- body\n\nYour tasks\n\n1. Identify document type\nClassify into one document type (or UNKNOWN).\n\nDocument types and internal labels\n\nCUSTOMER TENDER (RC)\nCustomer-side confirmation documents.\nIncludes: Customer Tender, Customer Rate Confirmation, Rate Confirmation, Rate Con, RC, Load Confirmation.\n\nCARRIER CONFIRMATION (CC)\nCarrier-side confirmation documents.\nIncludes: Carrier Confirmation, Carrier Tender, Carrier Rate Confirmation, Carrier Ratecon, CRC, Carrier Packet.\n\nBOL or POD (BOL)\nDelivery documents.\nIncludes: BOL, Bill of Lading, POD, Proof of Delivery, Signed BOL, Stamped paperwork, Delivery Receipt.\n\nUNKNOWN\nUse if the document type cannot be determined or if no document is requested.\n\n2. Extract load number\nExtract a load / shipment / reference number from subject.\n\nExamples:\nJ12345, J123456, E123456, U12346\n\nRules:\n- Preserve the raw text exactly as found.\n- If none found, return null.\n\n3. Thread handling\nAlways return the provided thread_id unchanged.\n\nImportant rules\n- Return only valid JSON matching the required schema\n- Do NOT infer intent\n- Do NOT make assumptions\n- Do NOT invent data\n- If uncertain, use UNKNOWN\n- No markdown, no explanations\n- Always return the original message_id exactly as received in the input.\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -80,
+        -1056
+      ],
+      "id": "7f71fe20-c2ba-4998-9954-b0ac5efe710a",
+      "name": "PPW"
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "==========\nmanual\n=========\n\n⚠️ MANUAL CORP REQUEST \n\nOwner: {{ $json.Owner }}\n\nSubject: {{ $json.Subject }}\n\nBody: {{ $json.Summary }}\n",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1632,
+        -464
+      ],
+      "id": "ab41f006-f576-4ad2-a46c-a6135d67c5c8",
+      "name": "3_not",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Telegram bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "thread",
+        "operation": "addLabels",
+        "threadId": "={{ $('IF_MANUAL').item.json.ThreadID }}",
+        "labelIds": [
+          "LABEL_ID_MANUAL"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1856,
+        -464
+      ],
+      "id": "4987e900-82d4-4335-b326-67a879083690",
+      "name": "LABEL_NOT_MANUAL",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $('IF_MANUAL').item.json.MessageID }}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2080,
+        -464
+      ],
+      "id": "f0f3ee3e-d67e-49cc-8e37-81b2b109dc09",
+      "name": "MARK_READ_MANUAL",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.File_ID }}",
+          "mode": "id"
+        },
+        "options": {
+          "binaryPropertyName": "=attachment",
+          "fileName": "={{ $json.File_Name }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1632,
+        -1056
+      ],
+      "id": "f70404d2-296f-45ae-ae6f-1bdd7b331131",
+      "name": "Download file1",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "thread",
+        "operation": "reply",
+        "threadId": "={{ $json.ThreadID }}",
+        "messageId": "={{ $json.MessageID }}",
+        "message": "Please see attached.",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {
+                "property": "attachment"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1856,
+        -1056
+      ],
+      "id": "8107f492-1c1f-48a9-8e12-e88d92cd2902",
+      "name": "Reply1",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "thread",
+        "operation": "removeLabels",
+        "threadId": "={{ $json.threadId }}",
+        "labelIds": [
+          "LABEL_ID_WAITING_FOR_DOCUMENT"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2080,
+        -1056
+      ],
+      "id": "5e75d5e5-4f9e-4abe-8289-9658eecf8971",
+      "name": "Remove label from thread",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "62ebf944-3741-4739-a285-9d196e825b0e",
+              "name": "ThreadID",
+              "value": "={{ $json.output.ThreadID }}",
+              "type": "string"
+            },
+            {
+              "id": "d52e2c39-3227-4b99-829c-a99198bc884d",
+              "name": "MessageID",
+              "value": "={{ $json.output.message_id }}",
+              "type": "string"
+            },
+            {
+              "id": "7904a036-420f-4301-b025-3c40fc4f31f4",
+              "name": "Doc_Type",
+              "value": "={{ $json.output.document_label }}",
+              "type": "string"
+            },
+            {
+              "id": "f362aacd-d180-4751-a28d-2672b2b137cc",
+              "name": "LoadNumber",
+              "value": "={{ $json.output.load_number }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        496,
+        -864
+      ],
+      "id": "07744d94-eab8-4d37-a7e8-a90a77a66fb1",
+      "name": "Set_DATA_After_AI_PPW"
+    },
+    {
+      "parameters": {
+        "jsCode": "const seen = new Set();\nconst result = [];\n\nfor (const item of $input.all()) {\n  const fileName = item.json.File_Name || '';\n  const subject = item.json.Subject || '';\n\n  const key = `${fileName}__${subject}`;\n\n  if (!seen.has(key)) {\n    seen.add(key);\n    result.push(item);\n  }\n}\n\nreturn result;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1408,
+        -1056
+      ],
+      "id": "6dcb61af-39f6-4891-8706-ad5a7ac1ab53",
+      "name": "Clear reply"
+    },
+    {
+      "parameters": {
+        "resource": "thread",
+        "filters": {
+          "labelIds": [
+            "LABEL_ID_DOCUMENT_REQUESTS"
+          ],
+          "readStatus": "unread"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -752,
+        -416
+      ],
+      "id": "b85efa02-9d55-4aea-acad-2375fb9d15b2",
+      "name": "Get many threads",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 2
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -976,
+        -1056
+      ],
+      "id": "1058478e-aa80-43c7-9479-e15d80a5b75a",
+      "name": "PPW_SCH"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 10
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -976,
+        -368
+      ],
+      "id": "9b7afacf-2284-44bf-9f86-f92efc3f6999",
+      "name": "NEW_SCH"
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "==========\ndone\n=========\n{{ $('Download file1').item.json.LoadNumber }}\n\n✅File had been uploaded found and sent.\n\n",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2304,
+        -1056
+      ],
+      "id": "a549da2f-9552-4621-839e-27702c9e0399",
+      "name": "2_not_later",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Telegram bot"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get many threads1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get many threads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set_DATA": {
+      "main": [
+        [
+          {
+            "node": "Clean Subject +Replies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a thread": {
+      "main": [
+        [
+          {
+            "node": "Set_DATA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean Subject +Replies": {
+      "main": [
+        [
+          {
+            "node": "Replies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Replies": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Subject",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "1_not": {
+      "main": [
+        [
+          {
+            "node": "MARK_READ",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "LABEL_NOT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Subject": {
+      "main": [
+        [
+          {
+            "node": "NEW",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "1_not",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MARK_READ": {
+      "main": [
+        []
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "NEW",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "NEW",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet in Google Sheets": {
+      "ai_tool": [
+        [
+          {
+            "node": "NEW",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NEW": {
+      "main": [
+        [
+          {
+            "node": "Set_DATA_After_AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set_DATA_After_AI": {
+      "main": [
+        [
+          {
+            "node": "IF_MANUAL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search File ID": {
+      "main": [
+        [
+          {
+            "node": "Add Thread_NEW",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF_MANUAL": {
+      "main": [
+        [
+          {
+            "node": "Search File ID",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge_NEW",
+            "type": "main",
+            "index": 1
+          }
+        ],
+        [
+          {
+            "node": "3_not",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download file": {
+      "main": [
+        [
+          {
+            "node": "Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply": {
+      "main": [
+        [
+          {
+            "node": "Mark as read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark as read": {
+      "main": [
+        [
+          {
+            "node": "2_not",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF_UPLOADED": {
+      "main": [
+        [
+          {
+            "node": "Download file",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "LABEL_PPW",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LABEL_PPW": {
+      "main": [
+        [
+          {
+            "node": "MARK_READ_UN_UPLOADED",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many threads1": {
+      "main": [
+        [
+          {
+            "node": "Get a thread1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a thread1": {
+      "main": [
+        [
+          {
+            "node": "Set_DATA1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set_DATA1": {
+      "main": [
+        [
+          {
+            "node": "PPW",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "PPW",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "PPW",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search File ID1": {
+      "main": [
+        [
+          {
+            "node": "Add Thread_PPW",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add Thread_PPW": {
+      "main": [
+        [
+          {
+            "node": "MergePPW",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add Thread_NEW": {
+      "main": [
+        [
+          {
+            "node": "Merge_NEW",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge_NEW": {
+      "main": [
+        [
+          {
+            "node": "IF_UPLOADED",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MergePPW": {
+      "main": [
+        [
+          {
+            "node": "IF_UPLOADED1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PPW": {
+      "main": [
+        [
+          {
+            "node": "Search File ID1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Set_DATA_After_AI_PPW",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3_not": {
+      "main": [
+        [
+          {
+            "node": "LABEL_NOT_MANUAL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LABEL_NOT_MANUAL": {
+      "main": [
+        [
+          {
+            "node": "MARK_READ_MANUAL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF_UPLOADED1": {
+      "main": [
+        [
+          {
+            "node": "Clear reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply1": {
+      "main": [
+        [
+          {
+            "node": "Remove label from thread",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download file1": {
+      "main": [
+        [
+          {
+            "node": "Reply1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove label from thread": {
+      "main": [
+        [
+          {
+            "node": "2_not_later",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set_DATA_After_AI_PPW": {
+      "main": [
+        [
+          {
+            "node": "MergePPW",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Clear reply": {
+      "main": [
+        [
+          {
+            "node": "Download file1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many threads": {
+      "main": [
+        [
+          {
+            "node": "Get a thread",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PPW_SCH": {
+      "main": [
+        [
+          {
+            "node": "Get many threads1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NEW_SCH": {
+      "main": [
+        [
+          {
+            "node": "Get many threads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "meta": {},
+  "tags": []
+}
