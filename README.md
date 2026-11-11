@@ -3,6 +3,7 @@
 An n8n workflow that answers emailed requests for shipment documents at a freight brokerage: rate confirmations, carrier confirmations, BOLs and PODs.
 
 It has been running in production for over a year.
+![Workflow in n8n](workflow.png)
 
 | | |
 |---|---|
